@@ -69,7 +69,7 @@ public class UserController {
             throw new ValidationException("Электронная почта должна содержать символ @");
         }
 
-        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")){
+        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
             log.error("Ошибка валидации: пустой логин или содержит пробелы");
             throw new ValidationException("Логин не может быть пустым и содержать пробелы");
         }
@@ -80,7 +80,7 @@ public class UserController {
         }
 
         if (user.getName() == null || user.getName().isBlank()) {
-            log.info("Имя для отображения не заполнено, оно будет заменено на логин {}",user.getLogin());
+            log.info("Имя для отображения не заполнено, оно будет заменено на логин {}", user.getLogin());
             user.setName(user.getLogin());
         }
     }
