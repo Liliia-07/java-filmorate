@@ -1,10 +1,11 @@
 package ru.yandex.practicum.filmorate.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.FriendshipStatus;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
@@ -14,10 +15,13 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class UserService {
 
     private final UserStorage userStorage;
+
+    public UserService(@Qualifier("userDbStorage") UserStorage userStorage) {
+        this.userStorage = userStorage;
+    }
 
     public User create(User user) {
         validateUser(user);
@@ -29,6 +33,12 @@ public class UserService {
             throw new NotFoundException("Пользователь с id = " + user.getId() + " не найден");
         }
         validateUser(user);
+
+        User existingUser = getById(user.getId());
+        if (user.getFriends() == null || user.getFriends().isEmpty()) {
+            user.setFriends(existingUser.getFriends());
+        }
+
         return userStorage.update(user);
     }
 
@@ -50,28 +60,39 @@ public class UserService {
 
     public void addFriend(Long userId, Long friendId) {
         User user = getById(userId);
-        User friend = getById(friendId);
+
+        if (!userStorage.contains(friendId)) {
+            throw new NotFoundException("Пользователь с id = " + friendId + " не найден");
+        }
 
         if (userId.equals(friendId)) {
             throw new ValidationException("Нельзя добавить себя в друзья");
         }
 
-        user.getFriends().add(friendId);
-        friend.getFriends().add(userId);
+        user.getFriends().put(friendId, FriendshipStatus.CONFIRMED);
+        userStorage.update(user);
 
         log.info("Пользователь {} добавил в друзья пользователя {}", userId, friendId);
     }
 
     public void removeFriend(Long userId, Long friendId) {
         User user = getById(userId);
-        User friend = getById(friendId);
+
+        if (!userStorage.contains(friendId)) {
+            throw new NotFoundException("Пользователь с id = " + friendId + " не найден");
+        }
 
         if (userId.equals(friendId)) {
             throw new ValidationException("Нельзя удалить себя из друзей");
         }
 
+        if (!user.getFriends().containsKey(friendId)) {
+            log.info("Пользователи {} и {} не являются друзьями", userId, friendId);
+            return;
+        }
+
         user.getFriends().remove(friendId);
-        friend.getFriends().remove(userId);
+        userStorage.update(user);
 
         log.info("Пользователь {} удалил из друзей пользователя {}", userId, friendId);
     }
@@ -79,7 +100,7 @@ public class UserService {
     public List<User> getFriends(Long userId) {
         User user = getById(userId);
 
-        return user.getFriends().stream()
+        return user.getFriends().keySet().stream()
                 .map(this::getById)
                 .collect(Collectors.toList());
     }
@@ -88,10 +109,12 @@ public class UserService {
         User user = getById(userId);
         User otherUser = getById(otherUserId);
 
-        Set<Long> commonFriendsIds = new HashSet<>(user.getFriends());
-        commonFriendsIds.retainAll(otherUser.getFriends());
+        Set<Long> userFriends = new HashSet<>(user.getFriends().keySet());
+        Set<Long> otherUserFriends = new HashSet<>(otherUser.getFriends().keySet());
 
-        return commonFriendsIds.stream()
+        userFriends.retainAll(otherUserFriends);
+
+        return userFriends.stream()
                 .map(this::getById)
                 .collect(Collectors.toList());
     }
@@ -114,6 +137,11 @@ public class UserService {
 
         if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
+            log.info("Имя пользователя не задано, используется логин: {}", user.getLogin());
+        }
+
+        if (user.getFriends() == null) {
+            user.setFriends(new HashMap<>());
         }
     }
 }

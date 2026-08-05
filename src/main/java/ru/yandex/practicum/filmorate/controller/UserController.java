@@ -9,6 +9,7 @@ import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/users")
@@ -56,9 +57,10 @@ public class UserController {
     // Добавление в друзья
     @PutMapping("/{id}/friends/{friendId}")
     @ResponseStatus(HttpStatus.OK)
-    public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
+    public Map<String, String> addFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("PUT /users/{}/friends/{} - Добавление в друзья", id, friendId);
         userService.addFriend(id, friendId);
+        return Map.of("message", "Friend added successfully");
     }
 
     // Удаление из друзей
