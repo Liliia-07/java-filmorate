@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.dto.UserDto;
-import ru.yandex.practicum.filmorate.mapper.UserMapper;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.util.List;
@@ -23,32 +22,28 @@ public class UserController {
     @ResponseStatus(HttpStatus.OK)
     public List<UserDto> getAllUsers() {
         log.info("GET /users");
-        return UserMapper.toDtoList(userService.getAll());
+        return userService.getAll();
     }
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public UserDto getUserById(@PathVariable Long id) {
         log.info("GET /users/{}", id);
-        return UserMapper.toDto(userService.getById(id));
+        return userService.getById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserDto createUser(@Valid @RequestBody UserDto userDto) {
         log.info("POST /users");
-        return UserMapper.toDto(
-                userService.create(UserMapper.toEntity(userDto))
-        );
+        return userService.create(userDto);
     }
 
     @PutMapping
     @ResponseStatus(HttpStatus.OK)
     public UserDto updateUser(@Valid @RequestBody UserDto userDto) {
         log.info("PUT /users");
-        return UserMapper.toDto(
-                userService.update(UserMapper.toEntity(userDto))
-        );
+        return userService.update(userDto);
     }
 
     @DeleteMapping("/{id}")
@@ -58,7 +53,6 @@ public class UserController {
         userService.delete(id);
     }
 
-    // Добавление в друзья
     @PutMapping("/{id}/friends/{friendId}")
     @ResponseStatus(HttpStatus.OK)
     public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
@@ -66,7 +60,6 @@ public class UserController {
         userService.addFriend(id, friendId);
     }
 
-    // Удаление из друзей
     @DeleteMapping("/{id}/friends/{friendId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeFriend(@PathVariable Long id, @PathVariable Long friendId) {
@@ -74,19 +67,17 @@ public class UserController {
         userService.removeFriend(id, friendId);
     }
 
-    // Получение списка друзей
     @GetMapping("/{id}/friends")
     @ResponseStatus(HttpStatus.OK)
     public List<UserDto> getFriends(@PathVariable Long id) {
         log.info("GET /users/{}/friends", id);
-        return UserMapper.toDtoList(userService.getFriends(id));
+        return userService.getFriends(id);
     }
 
-    // Получение списка общих друзей
     @GetMapping("/{id}/friends/common/{otherId}")
     @ResponseStatus(HttpStatus.OK)
     public List<UserDto> getCommonFriends(@PathVariable Long id, @PathVariable Long otherId) {
         log.info("GET /users/{}/friends/common/{}", id, otherId);
-        return UserMapper.toDtoList(userService.getCommonFriends(id, otherId));
+        return userService.getCommonFriends(id, otherId);
     }
 }

@@ -3,8 +3,14 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.dto.FilmDto;
+import ru.yandex.practicum.filmorate.dto.GenreDto;
+import ru.yandex.practicum.filmorate.dto.MpaDto;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.mapper.FilmMapper;
+import ru.yandex.practicum.filmorate.mapper.GenreMapper;
+import ru.yandex.practicum.filmorate.mapper.MpaMapper;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Mpa;
@@ -31,26 +37,31 @@ public class FilmService {
         this.userStorage = userStorage;
     }
 
-    public Film create(Film film) {
+    public FilmDto create(FilmDto filmDto) {
+        Film film = FilmMapper.toEntity(filmDto);
         validateFilm(film);
-        return filmStorage.create(film);
+        Film created = filmStorage.create(film);
+        return FilmMapper.toDto(created);
     }
 
-    public Film update(Film film) {
+    public FilmDto update(FilmDto filmDto) {
+        Film film = FilmMapper.toEntity(filmDto);
         if (!filmStorage.contains(film.getId())) {
             throw new NotFoundException("Фильм с id = " + film.getId() + " не найден");
         }
         validateFilm(film);
-        return filmStorage.update(film);
+        Film updated = filmStorage.update(film);
+        return FilmMapper.toDto(updated);
     }
 
-    public List<Film> getAll() {
-        return filmStorage.getAll();
+    public List<FilmDto> getAll() {
+        return FilmMapper.toDtoList(filmStorage.getAll());
     }
 
-    public Film getById(Long id) {
-        return filmStorage.getById(id)
+    public FilmDto getById(Long id) {
+        Film film = filmStorage.getById(id)
                 .orElseThrow(() -> new NotFoundException("Фильм с id = " + id + " не найден"));
+        return FilmMapper.toDto(film);
     }
 
     public void delete(Long id) {
@@ -61,7 +72,8 @@ public class FilmService {
     }
 
     public void addLike(Long filmId, Long userId) {
-        Film film = getById(filmId);
+        Film film = filmStorage.getById(filmId)
+                .orElseThrow(() -> new NotFoundException("Фильм с id = " + filmId + " не найден"));
 
         if (!userStorage.contains(userId)) {
             throw new NotFoundException("Пользователь с id = " + userId + " не найден");
@@ -81,7 +93,8 @@ public class FilmService {
     }
 
     public void removeLike(Long filmId, Long userId) {
-        Film film = getById(filmId);
+        Film film = filmStorage.getById(filmId)
+                .orElseThrow(() -> new NotFoundException("Фильм с id = " + filmId + " не найден"));
 
         if (!userStorage.contains(userId)) {
             throw new NotFoundException("Пользователь с id = " + userId + " не найден");
@@ -100,53 +113,73 @@ public class FilmService {
         log.info("Пользователь {} удалил лайк с фильма {}", userId, filmId);
     }
 
-    public List<Film> getPopularFilms(int count) {
+    public List<FilmDto> getPopularFilms(int count) {
+        List<Film> films;
         if (filmStorage instanceof FilmDbStorage) {
-            return ((FilmDbStorage) filmStorage).getPopularFilms(count);
+            films = ((FilmDbStorage) filmStorage).getPopularFilms(count);
+        } else {
+            films = filmStorage.getAll().stream()
+                    .sorted((f1, f2) -> Integer.compare(f2.getLikes().size(), f1.getLikes().size()))
+                    .limit(count)
+                    .toList();
         }
-
-        return filmStorage.getAll().stream()
-                .sorted((f1, f2) -> Integer.compare(f2.getLikes().size(), f1.getLikes().size()))
-                .limit(count)
-                .toList();
+        return FilmMapper.toDtoList(films);
     }
 
-    public List<Genre> getAllGenres() {
+    public List<GenreDto> getAllGenres() {
+        List<Genre> genres;
         if (filmStorage instanceof FilmDbStorage) {
-            return ((FilmDbStorage) filmStorage).getAllGenres();
+            genres = ((FilmDbStorage) filmStorage).getAllGenres();
+        } else {
+            genres = List.of();
         }
-        return List.of();
+        return GenreMapper.toDtoList(genres);
     }
 
-    public Genre getGenreById(Long id) {
+    public GenreDto getGenreById(Long id) {
+        Genre genre;
         if (filmStorage instanceof FilmDbStorage) {
-            Genre genre = ((FilmDbStorage) filmStorage).getGenreById(id);
-            if (genre == null) {
-                throw new NotFoundException("Жанр с id = " + id + " не найден");
-            }
-            return genre;
+            genre = ((FilmDbStorage) filmStorage).getGenreById(id);
+        } else {
+            genre = null;
         }
-        throw new NotFoundException("Жанр с id = " + id + " не найден");
+
+        if (genre == null) {
+            throw new NotFoundException("Жанр с id = " + id + " не найден");
+        }
+
+        return GenreMapper.toDto(genre);
     }
 
-    public List<Mpa> getAllMpas() {
+    public List<MpaDto> getAllMpas() {
+        List<Mpa> mpas;
         if (filmStorage instanceof FilmDbStorage) {
-            return ((FilmDbStorage) filmStorage).getAllMpas();
+            mpas = ((FilmDbStorage) filmStorage).getAllMpas();
+        } else {
+            mpas = List.of();
         }
-        return List.of();
+        return MpaMapper.toDtoList(mpas);
     }
 
-    public Mpa getMpaById(Long id) {
+    public MpaDto getMpaById(Long id) {
+        Mpa mpa;
         if (filmStorage instanceof FilmDbStorage) {
             try {
-                return ((FilmDbStorage) filmStorage).getMpaById(id);
+                mpa = ((FilmDbStorage) filmStorage).getMpaById(id);
             } catch (NotFoundException e) {
                 throw e;
             } catch (Exception e) {
                 throw new NotFoundException("Рейтинг MPA с id = " + id + " не найден");
             }
+        } else {
+            mpa = null;
         }
-        throw new NotFoundException("Рейтинг MPA с id = " + id + " не найден");
+
+        if (mpa == null) {
+            throw new NotFoundException("Рейтинг MPA с id = " + id + " не найден");
+        }
+
+        return MpaMapper.toDto(mpa);
     }
 
     private void validateFilm(Film film) {

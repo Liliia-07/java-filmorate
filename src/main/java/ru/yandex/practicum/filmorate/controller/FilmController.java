@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.dto.FilmDto;
-import ru.yandex.practicum.filmorate.mapper.FilmMapper;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.util.List;
@@ -23,32 +22,28 @@ public class FilmController {
     @ResponseStatus(HttpStatus.OK)
     public List<FilmDto> getAllFilms() {
         log.info("GET /films");
-        return FilmMapper.toDtoList(filmService.getAll());
+        return filmService.getAll();
     }
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public FilmDto getFilmById(@PathVariable Long id) {
         log.info("GET /films/{}", id);
-        return FilmMapper.toDto(filmService.getById(id));
+        return filmService.getById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public FilmDto createFilm(@Valid @RequestBody FilmDto filmDto) {
         log.info("POST /films");
-        return FilmMapper.toDto(
-                filmService.create(FilmMapper.toEntity(filmDto))
-        );
+        return filmService.create(filmDto);
     }
 
     @PutMapping
     @ResponseStatus(HttpStatus.OK)
     public FilmDto updateFilm(@Valid @RequestBody FilmDto filmDto) {
         log.info("PUT /films");
-        return FilmMapper.toDto(
-                filmService.update(FilmMapper.toEntity(filmDto))
-        );
+        return filmService.update(filmDto);
     }
 
     @DeleteMapping("/{id}")
@@ -76,6 +71,6 @@ public class FilmController {
     @ResponseStatus(HttpStatus.OK)
     public List<FilmDto> getPopularFilms(@RequestParam(defaultValue = "10") int count) {
         log.info("GET /films/popular?count={}", count);
-        return FilmMapper.toDtoList(filmService.getPopularFilms(count));
+        return filmService.getPopularFilms(count);
     }
 }
