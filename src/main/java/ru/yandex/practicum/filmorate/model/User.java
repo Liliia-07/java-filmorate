@@ -9,7 +9,7 @@ import java.util.Map;
 
 @Data
 public class User {
-    private long id;
+    private Long id;
     @Email(message = "Email должен быть корректным")
     private String email;
     private String login;
